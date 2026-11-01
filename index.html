@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>اپلیکیشن هواشناسی برهان</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet"
+    type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+    }
+
+    .rain-bg {
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(148, 163, 184, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.12) 0%, transparent 50%),
+        repeating-linear-gradient(105deg, transparent 0px, transparent 18px, rgba(255, 255, 255, 0.03) 18px, rgba(255, 255, 255, 0.03) 19px);
+    }
+  </style>
+  <style>
+    .weather-chat-toggle {
+      position: fixed;
+      z-index: 51;
+      right: max(24px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+      display: grid;
+      width: 62px;
+      height: 62px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .48);
+      border-radius: 22px;
+      color: white;
+      background: linear-gradient(145deg, rgba(56, 189, 248, .92), rgba(99, 102, 241, .92));
+      box-shadow: 0 12px 36px rgba(14, 165, 233, .35), inset 0 1px 0 rgba(255, 255, 255, .45);
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .weather-chat-toggle:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 16px 42px rgba(14, 165, 233, .45), inset 0 1px 0 rgba(255, 255, 255, .5);
+    }
+
+    .weather-chat-toggle:focus-visible,
+    .weather-chat-close:focus-visible,
+    .weather-chat-send:focus-visible,
+    .weather-chat-suggestion:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 3px;
+    }
+
+    .weather-chat-toggle i {
+      font-size: 24px;
+    }
+
+    .weather-chat-panel {
+      position: fixed;
+      z-index: 50;
+      right: max(24px, env(safe-area-inset-right));
+      bottom: calc(max(24px, env(safe-area-inset-bottom)) + 78px);
+      display: flex;
+      width: min(390px, calc(100vw - 32px));
+      height: min(590px, calc(100dvh - 122px));
+      min-height: min(390px, calc(100dvh - 122px));
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 28px;
+      color: #f8fafc;
+      background: linear-gradient(155deg, rgba(23, 45, 70, .83), rgba(15, 28, 48, .9));
+      box-shadow: 0 28px 90px rgba(2, 8, 23, .48), inset 0 1px 0 rgba(255, 255, 255, .2);
+      -webkit-backdrop-filter: blur(28px) saturate(155%);
+      backdrop-filter: blur(28px) saturate(155%);
+      animation: weather-chat-in .24s ease-out;
+    }
+
+    .weather-chat-panel[hidden] {
+      display: none;
+    }
+
+    .weather-chat-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .12);
+      background: linear-gradient(110deg, rgba(56, 189, 248, .12), rgba(129, 140, 248, .08));
+    }
+
+    .weather-chat-avatar {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .32);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(56, 189, 248, .38), rgba(129, 140, 248, .32));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32);
+      font-size: 19px;
+    }
+
+    .weather-chat-heading {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .weather-chat-heading h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .weather-chat-heading p {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0 0;
+      color: rgba(226, 232, 240, .76);
+      font-size: 11px;
+    }
+
+    .weather-chat-status {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 10px rgba(74, 222, 128, .7);
+    }
+
+    .weather-chat-close {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 12px;
+      color: rgba(255, 255, 255, .82);
+      background: rgba(255, 255, 255, .07);
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+
+    .weather-chat-close:hover {
+      background: rgba(255, 255, 255, .15);
+    }
+
+    .weather-chat-messages {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      padding: 20px 16px 14px;
+      overscroll-behavior: contain;
+      scrollbar-color: rgba(255, 255, 255, .24) transparent;
+      scrollbar-width: thin;
+    }
+
+    .weather-chat-message {
+      max-width: 88%;
+      padding: 11px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 18px;
+      font-size: 13px;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      user-select: text;
+      -webkit-user-select: text;
+      animation: weather-chat-message-in .2s ease-out;
+    }
+
+    .weather-chat-message--bot {
+      align-self: flex-start;
+      border-top-right-radius: 6px;
+      background: rgba(255, 255, 255, .09);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .weather-chat-message--user {
+      align-self: flex-end;
+      border-color: rgba(125, 211, 252, .24);
+      border-top-left-radius: 6px;
+      background: linear-gradient(135deg, rgba(14, 165, 233, .32), rgba(99, 102, 241, .3));
+    }
+
+    .weather-chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 0 16px 13px;
+    }
+
+    .weather-chat-suggestion {
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 999px;
+      color: rgba(240, 249, 255, .9);
+      background: rgba(255, 255, 255, .06);
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background .2s ease, border-color .2s ease;
+    }
+
+    .weather-chat-suggestion:hover {
+      border-color: rgba(125, 211, 252, .46);
+      background: rgba(56, 189, 248, .14);
+    }
+
+    .weather-chat-form {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 13px 13px;
+      padding: 7px 8px 7px 7px;
+      border: 1px solid rgba(255, 255, 255, .17);
+      border-radius: 18px;
+      background: rgba(2, 6, 23, .25);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .weather-chat-form:focus-within {
+      border-color: rgba(125, 211, 252, .56);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, .1);
+    }
+
+    .weather-chat-input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      color: white;
+      background: transparent;
+      font: inherit;
+      font-size: 13px;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .weather-chat-input::placeholder {
+      color: rgba(203, 213, 225, .62);
+    }
+
+    .weather-chat-send {
+      display: grid;
+      width: 39px;
+      height: 39px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 0;
+      border-radius: 13px;
+      color: white;
+      background: linear-gradient(145deg, #38bdf8, #6366f1);
+      cursor: pointer;
+      transition: transform .2s ease, opacity .2s ease;
+    }
+
+    .weather-chat-send:hover {
+      transform: scale(1.05);
+    }
+
+    .weather-chat-send:disabled {
+      opacity: .5;
+      cursor: wait;
+    }
+
+    .weather-chat-typing {
+      display: flex;
+      width: fit-content;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 18px 18px 18px 6px;
+      background: rgba(255, 255, 255, .09);
+    }
+
+    .weather-chat-typing[hidden] {
+      display: none;
+    }
+
+    .weather-chat-typing span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(226, 232, 240, .8);
+      animation: weather-chat-dot 1s infinite ease-in-out;
+    }
+
+    .weather-chat-typing span:nth-child(2) {
+      animation-delay: .14s;
+    }
+
+    .weather-chat-typing span:nth-child(3) {
+      animation-delay: .28s;
+    }
+
+    @keyframes weather-chat-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes weather-chat-message-in {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes weather-chat-dot {
+
+      0%,
+      60%,
+      100% {
+        opacity: .45;
+        transform: translateY(0);
+      }
+
+      30% {
+        opacity: 1;
+        transform: translateY(-3px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .weather-chat-toggle {
+        right: max(16px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        width: 56px;
+        height: 56px;
+        border-radius: 19px;
+      }
+
+      .weather-chat-panel {
+        right: 12px;
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 68px);
+        width: calc(100vw - 24px);
+        height: min(600px, calc(100dvh - 100px));
+        min-height: min(340px, calc(100dvh - 100px));
+        border-radius: 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .weather-chat-panel,
+      .weather-chat-message,
+      .weather-chat-typing span {
+        animation: none;
+      }
+
+      .weather-chat-toggle,
+      .weather-chat-suggestion,
+      .weather-chat-send {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body
+  class="min-h-screen bg-gradient-to-b from-[#2c4356] via-[#1b3149] to-[#0f1c2e] rain-bg text-white flex flex-col justify-between p-4 md:p-8 lg:px-14 select-none overflow-x-hidden">
+
+  <div class="max-w-7xl w-full mx-auto space-y-8 my-auto">
+
+    <!-- ۱. هدر و جستجو -->
+    <header class="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2.5 w-full md:w-auto flex-1 max-w-3xl">
+        <div
+          class="relative flex items-center w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2.5 shadow-lg focus-within:border-sky-400/60 transition">
+          <span class="text-sm text-slate-200 pl-3 border-l border-white/20 font-medium shrink-0">جستجو</span>
+          <input id="searchInput" type="text"
+            placeholder="نام شهر را بنویسید و اینتر بزنید... (مثلاً: داراب، تهران، شیراز)"
+            class="w-full bg-transparent pr-3 pl-8 text-sm text-white placeholder-slate-300/80 focus:outline-none" />
+          <button id="searchBtn" class="absolute left-3 text-slate-300 hover:text-white transition px-2">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 self-end md:self-auto">
+        <div class="text-left">
+          <h1 class="font-bold text-lg md:text-xl leading-tight tracking-wide">هواشناسی برهان</h1>
+          <p class="text-xs text-slate-300 font-sans tracking-wider">Borhan Weather</p>
+        </div>
+        <div class="relative w-12 h-12 flex items-center justify-center">
+          <i class="fa-solid fa-sun text-amber-400 text-2xl absolute -top-0.5 right-1"></i>
+          <i class="fa-solid fa-cloud text-sky-100 text-3xl absolute bottom-1 left-1"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- ۲. بخش میانی: کارت اصلی + ۶ کارت شاخص -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+      <!-- کارت بزرگ شهر -->
+      <section
+        class="lg:col-span-5 bg-white/10 backdrop-blur-xl border border-white/25 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+        <div class="text-right">
+          <h2 id="cityName" class="text-3xl md:text-4xl font-extrabold tracking-tight">داراب، ایران</h2>
+          <p id="statusText" class="text-slate-300 text-sm mt-1">زمان فعلی</p>
+        </div>
+
+        <div class="flex items-center justify-between my-8">
+          <div class="w-28 h-28 flex items-center justify-center">
+            <i id="mainIcon" class="fa-solid fa-sun text-amber-400 text-7xl drop-shadow-lg"></i>
+          </div>
+          <div id="mainTemp" class="text-6xl md:text-7xl font-black font-sans tracking-tighter drop-shadow-lg"
+            dir="ltr">
+            24°C
+          </div>
+        </div>
+
+        <div class="text-right space-y-1">
+          <p id="weatherDesc" class="text-xl font-bold">آفتابی</p>
+          <p id="maxMinTemp" class="text-sm text-slate-300">حداکثر: °۲۶ | حداقل: °۱۴</p>
+        </div>
+      </section>
+
+      <!-- ۶ کارت شاخص -->
+      <section class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-500 to-sky-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-wind text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">سرعت باد</p>
+            <p id="windSpeed" class="text-lg md:text-xl font-bold mt-1">-- کیلومتر بر ساعت</p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-droplet text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">رطوبت</p>
+            <p id="humidity" class="text-xl md:text-2xl font-bold mt-1">%--</p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-eye text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">دید افقی</p>
+            <p id="visibility" class="text-lg md:text-xl font-bold mt-1">-- کیلومتر</p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-leaf text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">کیفیت هوا</p>
+            <p id="airQuality" class="text-lg md:text-xl font-bold mt-1">خوب - استاندارد</p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-umbrella text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">امکان بارش</p>
+            <p id="rainChance" class="text-xl md:text-2xl font-bold mt-1">%--</p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 flex items-center justify-between shadow-lg">
+          <div
+            class="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-gauge-high text-white text-2xl"></i>
+          </div>
+          <div class="text-left">
+            <p class="text-slate-200 text-sm font-medium">فشار هوا</p>
+            <p id="pressure" class="text-lg md:text-xl font-bold mt-1">-- میلی‌بار</p>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- ۳. پیش‌بینی ۷ روز آینده -->
+    <section class="space-y-4 pt-2">
+      <h3 class="text-xl font-bold text-right">پیش‌بینی ۷ روز آینده</h3>
+      <div id="forecastContainer" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
+        <!-- کارت‌های ۷ روز به صورت خودکار توسط جاوا اسکریپت اینجا ساخته می‌شوند -->
+      </div>
+    </section>
+
+  </div>
+
+  <button id="weatherChatToggle" class="weather-chat-toggle" type="button" aria-label="باز کردن چت راهنمای هواشناسی"
+    aria-controls="weatherChatPanel" aria-expanded="false">
+    <i class="fa-solid fa-message" aria-hidden="true"></i>
+  </button>
+
+  <section id="weatherChatPanel" class="weather-chat-panel" aria-label="چت راهنمای هواشناسی" hidden>
+    <header class="weather-chat-header">
+      <div class="weather-chat-avatar" aria-hidden="true"><i class="fa-solid fa-cloud-sun"></i></div>
+      <div class="weather-chat-heading">
+        <h2>همراه هوشمند هواشناسی</h2>
+        <p><span class="weather-chat-status" aria-hidden="true"></span> آماده‌ی پاسخ‌گویی</p>
+      </div>
+      <button id="weatherChatClose" class="weather-chat-close" type="button" aria-label="بستن چت">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </header>
+    <div id="weatherChatMessages" class="weather-chat-messages" role="log" aria-live="polite"
+      aria-relevant="additions text">
+      <div class="weather-chat-message weather-chat-message--bot">سلام! من راهنمای هواشناسی‌ات هستم. درباره‌ی دمای فعلی،
+        وضعیت هوا، باد، بارش یا کیفیت هوای شهر روی صفحه از من بپرس 🌤️</div>
+      <div id="weatherChatTyping" class="weather-chat-typing" role="status" aria-label="در حال نوشتن" hidden>
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <div class="weather-chat-suggestions" aria-label="پرسش‌های پیشنهادی">
+      <button class="weather-chat-suggestion" type="button" data-chat-prompt="دمای الان چنده؟">دمای الان چنده؟</button>
+      <button class="weather-chat-suggestion" type="button" data-chat-prompt="هوا چطوره؟">هوا چطوره؟</button>
+      <button class="weather-chat-suggestion" type="button" data-chat-prompt="احتمال بارش چقدره؟">احتمال بارش</button>
+    </div>
+    <form id="weatherChatForm" class="weather-chat-form">
+      <input id="weatherChatInput" class="weather-chat-input" type="text" maxlength="300" autocomplete="off"
+        placeholder="پیامت رو اینجا بنویس..." aria-label="پیام شما" required />
+      <button id="weatherChatSend" class="weather-chat-send" type="submit" aria-label="ارسال پیام">
+        <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+      </button>
+    </form>
+  </section>
+
+  <!-- اتصال فایل جاوا اسکریپت -->
+  <script src="./script.js"></script>
+</body>
+
+</html>
